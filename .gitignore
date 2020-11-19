@@ -1,0 +1,9 @@
+.*.swa
+.*.swo
+.*.swp
+*.txt
+*.S
+*.o
+*.d
+*.a
+src/*_gcc.c

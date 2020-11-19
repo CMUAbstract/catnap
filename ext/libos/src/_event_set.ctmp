@@ -1,0 +1,78 @@
+#include <libos/event_set.h>
+
+__nv unsigned event_list_updating_start = 0;
+__nv Event_set* event_sets[MAX_EVENT_SET_NUM];
+__nv unsigned event_sets_it = 0;
+
+// This might be unnecessary, but just for sure.
+// I do not believe the compiler's bss that much
+void init_event_sets()
+{
+	for (unsigned i = 0; i < event_sets_it; ++i) {
+		Event_set* set = event_sets[i];
+		for (unsigned j = 0; j < MODE_NUM; ++j) {
+			set->mode_level_table[j] = 0;
+		}
+	}
+}
+
+// Fill event list with a certain events
+// adhering to the current mode
+void set_event_list()
+{
+	event_list_updating_start = 1;
+
+	event_list_it = 0;
+	event_list_all_it = 0;
+
+	task_list_all_it = 0;
+
+	for (unsigned i = 0; i < event_sets_it; ++i) {
+		// For every event sets
+		Event_set* set = event_sets[i];
+		// Get the level for current mode
+		// (0 is highest)
+		unsigned level = set->mode_level_table[get_mode()];
+		for (unsigned j = 0; j < set->events_it[level]; ++j) {
+			// Get events for the level
+			Event* e = set->events[level][j];
+
+			// Register the event as current
+			event_list_all[event_list_all_it++] = e;
+			// if the event is periodic & active,
+			// register as active event
+			if (!e->is_one_time_event) {
+				event_list[event_list_it++] = e;
+			}
+		}
+		for (unsigned j = 0; j < set->tasks_it[level]; ++j) {
+			// Get events for the level
+			Task* t = set->tasks[level][j];
+
+			// Register the task as current
+			task_list_all[task_list_all_it++] = t;
+		}
+	}
+
+	for (unsigned i = 0; i < event_list_it; ++i) {
+		event_list[i]->nextT = event_list[i]->get_period();
+	}
+
+	event_list_updating_start = 0;
+}
+
+// Check if Event e is in Event_set set
+// with the current level
+unsigned is_in_event_set(Event* e, Event_set* set)
+{
+	unsigned cur_level = set->mode_level_table[get_mode()];
+	
+	for (unsigned i = 0; i < set->events_it[cur_level]; ++i) {
+		Event* e2 = set->events[cur_level][i];
+		if (e == e2) {
+			return 1;
+		}
+	}
+	
+	return 0;
+}
